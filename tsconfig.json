@@ -1,33 +1,29 @@
 {
   "compilerOptions": {
-    /* Layout do Projeto */
     "rootDir": "./src",
     "outDir": "./dist",
 
-    /* Configurações de Ambiente */
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
     "lib": ["ESNext"],
-    "types": ["node"],
 
-    /* Saídas e Debugging */
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
 
-    /* Checagem de Tipos Estrita */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    /* Opções Recomendadas para Performance e ESM */
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -1,16 +1,34 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import authRoutes from './routes/authRoutes.js';
+import { connectWithRetry } from './config/db.js';
+import { initDatabase } from './config/initiDB.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+app.use('/auth', authRoutes);
+
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
+async function startServer() {
+  try {
+    await connectWithRetry();
+
+    // 🔥 AQUI A MÁGICA
+    await initDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 MedFlow rodando na porta ${PORT}`);
+    });
+
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+}
+
+startServer();
