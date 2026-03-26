@@ -27,6 +27,37 @@ export async function initDatabase() {
         prazo_retorno_days INTEGER DEFAULT 15
       );
     `);
+    
+    await pool.query(`
+  CREATE TABLE IF NOT EXISTS tb_agendamento (
+    id SERIAL PRIMARY KEY,
+
+    nome_paciente VARCHAR(255) NOT NULL,
+    documento VARCHAR(50) NOT NULL,
+
+    tipo_exame VARCHAR(255) NOT NULL,
+    convenio VARCHAR(100),
+
+    data_agendamento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atendimento TIMESTAMP,
+
+    autorizado BOOLEAN DEFAULT FALSE,
+    data_autorizacao TIMESTAMP,
+
+    houve_atendimento BOOLEAN,
+    paciente_compareceu BOOLEAN,
+    data_real_atendimento TIMESTAMP,
+
+    faturado BOOLEAN DEFAULT FALSE,
+    data_faturamento TIMESTAMP,
+    data_envio_faturamento TIMESTAMP,
+
+    status VARCHAR(50) DEFAULT 'pendente',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+    
 
     // 🔹 Convênio padrão
     await pool.query(`

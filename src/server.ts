@@ -4,6 +4,7 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import { connectWithRetry } from './config/db.js';
 import { initDatabase } from './config/initiDB.js';
+import agendamentoRoutes from './routes/agendamentoRoutes.js';
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/auth', authRoutes);
+app.use('/agendamentos', agendamentoRoutes);
 
 const PORT = process.env.PORT || 3000;
 
