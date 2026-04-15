@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { pool } from '../config/database.js';
+import pool from '../config/database.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 

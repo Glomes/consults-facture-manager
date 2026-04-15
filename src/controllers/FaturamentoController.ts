@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { pool } from '../config/database.js';
+import pool from '../config/database.js';
 
 export const FaturamentoController = {
   async create(req: any, res: Response) {
@@ -18,7 +18,7 @@ export const FaturamentoController = {
 
   async list(req: any, res: Response) {
     try {
-      // Filtra apenas o que pertence ao usuário logado
+  
       const { rows } = await pool.query(
         'SELECT * FROM faturamentos WHERE usuario_id = $1 ORDER BY created_at DESC', 
         [req.userId]
@@ -36,7 +36,7 @@ export const FaturamentoController = {
     const valor = data_envio || data_faturamento;
 
     try {
-      // Garante que o usuário só atualiza o que é DELE
+
       const { rows } = await pool.query(
         `UPDATE faturamentos SET ${campo} = $1 WHERE id = $2 AND usuario_id = $3 RETURNING *`, 
         [valor, id, req.userId]

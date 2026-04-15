@@ -1,7 +1,10 @@
-import pg from 'pg';
-const { Pool } = pg;
+import { Pool } from 'pg';
 
-export const pool = new Pool({
-
-  connectionString: 'postgresql://admin:password123@medflow_db:5432/medflow_db'
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
+export default pool;

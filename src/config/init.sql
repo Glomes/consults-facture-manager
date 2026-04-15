@@ -1,4 +1,3 @@
--- 1. Tabela de Usuários
 CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -7,9 +6,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Alterar Faturamentos para incluir o dono do registro
--- Se a tabela já existir, rode: 
--- ALTER TABLE faturamentos ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id);
+
 DROP TABLE IF EXISTS faturamentos;
 CREATE TABLE faturamentos (
     id SERIAL PRIMARY KEY,

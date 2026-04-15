@@ -1,12 +1,18 @@
-FROM node:18-alpine
+FROM node:20-slim
 
-WORKDIR /usr/app
+WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-EXPOSE 3000
+# build do TypeScript
+RUN npm run build
 
-CMD ["npm", "run", "dev"]
+# segurança
+USER node
+
+EXPOSE 10000
+
+CMD ["node", "dist/server.js"]
