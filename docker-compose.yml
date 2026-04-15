@@ -28,7 +28,7 @@ services:
       - db
     environment:
       DATABASE_URL: postgresql://admin:password123@db:5432/medflow_db
-      JWT_SECRET: secret_key_123
+      JWT_SECRET: amazing_fantasy_15
 
 volumes:
   pgdata:
