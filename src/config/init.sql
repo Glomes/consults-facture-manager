@@ -1,6 +1,19 @@
--- Criar tabela de faturamentos
-CREATE TABLE IF NOT EXISTS faturamentos (
+-- 1. Tabela de Usuários
+CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Alterar Faturamentos para incluir o dono do registro
+-- Se a tabela já existir, rode: 
+-- ALTER TABLE faturamentos ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id);
+DROP TABLE IF EXISTS faturamentos;
+CREATE TABLE faturamentos (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
     nome_paciente VARCHAR(255) NOT NULL,
     documento VARCHAR(50) NOT NULL,
     exame VARCHAR(100) NOT NULL,
@@ -11,5 +24,4 @@ CREATE TABLE IF NOT EXISTS faturamentos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index para otimizar a busca por convênio no dashboard
-CREATE INDEX IF NOT EXISTS idx_faturamentos_convenio ON faturamentos(convenio);
+CREATE INDEX idx_faturamentos_usuario ON faturamentos(usuario_id);
