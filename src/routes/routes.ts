@@ -18,4 +18,6 @@ routes.patch('/faturamentos/:id', FaturamentoController.updateStatus);
 routes.get('/faturamentos/stats', FaturamentoController.getStats);
 routes.delete('/faturamentos/:id', FaturamentoController.delete);
 
+
+
 export default routes;

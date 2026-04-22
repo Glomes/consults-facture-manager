@@ -9,26 +9,22 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password123
       POSTGRES_DB: medflow_db
-    ports:
-      - "5432:5432"
     volumes:
-     - pgdata:/var/lib/postgresql/data
-     - ./src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
-      
+      - pgdata:/var/lib/postgresql/data
+      - ./src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   backend:
     build: .
     container_name: medflow_backend
-    volumes:
-      - .:/usr/app
-      - /usr/app/node_modules
-    ports:
-      - "3000:3000"
+    restart: always
     depends_on:
       - db
     environment:
       DATABASE_URL: postgresql://admin:password123@db:5432/medflow_db
       JWT_SECRET: amazing_fantasy_15
+      PORT: 10000
+    ports:
+      - "10000:10000"
 
 volumes:
   pgdata:
