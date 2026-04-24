@@ -18,9 +18,8 @@ services:
     restart: always
     depends_on:
       - db
-    environment:
-      DATABASE_URL: postgresql://admin:password123@db:5432/medflow_db
-      PORT: 10000
+    env_file:
+    - .env
     ports:
       - "10000:10000"
 

@@ -3,7 +3,6 @@ import pool from '../config/database.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// A mesma correção aqui para o sign()
 const JWT_SECRET = (process.env.JWT_SECRET || 'secret_key_medsync_2024') as string;
 
 export const AuthController = {
@@ -34,7 +33,6 @@ export const AuthController = {
         return res.status(401).json({ error: "Credenciais inválidas" });
       }
 
-      // Agora o TS aceita o JWT_SECRET sem reclamar de undefined
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.json({
