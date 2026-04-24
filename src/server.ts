@@ -15,7 +15,7 @@ app.use(helmet({
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://consults-facture-manager-spa.vercel.app/'
+  'https://consults-facture-manager-spa.vercel.app'
 ];
 
 app.use(cors({
