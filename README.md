@@ -1,16 +1,22 @@
-# 🚑 FaturaMed
+# 💰 Consults Facture Manager
 
-API RESTful para monitoramento de faturamento para clinicas conveniadas.
+API RESTful para gerenciamento e monitoramento de faturamento de consultas médicas em clínicas conveniadas.
 
-## Features
+## 📋 Visão Geral
 
-- CRUD de atendimentos e usuários
-- Autenticação JWT
-- Validação de dados com middlewares
-- Paginação e filtros
-- Docker e Docker Compose para ambiente isolado
+O **Consults Facture Manager** é uma solução completa para rastrear o ciclo de vida do faturamento de atendimentos médicos, desde a consulta até o recebimento do pagamento. A aplicação permite que usuários (clínicas) monitorem o status do faturamento com múltiplos convênios e gera relatórios detalhados.
 
-Esta API foi desenvolvida para gerenciar o status do processo de faturamento. O projeto implementa boas práticas de desenvolvimento.
+## ✨ Features
+
+- 🔐 **Autenticação JWT** - Segurança em todas as rotas protegidas
+- 📊 **CRUD de Faturamentos** - Criação, leitura, atualização e deleção de registros
+- 🔄 **Rastreamento de Status** - Acompanhamento completo: não enviado → enviado → faturado → recebido
+- 📈 **Relatórios Mensais** - Dados consolidados por mês e ano
+- 📉 **Estatísticas por Convênio** - Dashboard com métricas aggregadas
+- 🔍 **Filtros Avançados** - Busca por status, convênio e ordenação
+- 📄 **Validação de Dados** - Middleware customizado para garantir integridade
+- 🐳 **Docker Ready** - Containerização completa com Docker Compose
+- ⚡ **Paginação** - Suporte a listagens paginadas
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -18,81 +24,89 @@ Esta API foi desenvolvida para gerenciar o status do processo de faturamento. O 
 
 - **Node.js** - Runtime JavaScript
 - **TypeScript** - Linguagem de programação tipada
-- **Express.js** - Framework web para Node.js
+- **Express.js** - Framework web minimalista e robusto
 - **PostgreSQL** - Banco de dados relacional
 - **pg** - Cliente PostgreSQL para Node.js
-- **JWT** - Auntenticação via JWT
+- **JWT (jsonwebtoken)** - Autenticação segura
+- **bcryptjs** - Hash seguro de senhas
+- **Helmet** - Middleware de segurança HTTP
+- **CORS** - Compartilhamento de recursos entre origens
 
-### Desenvolvimento e Qualidade
+### Desenvolvimento
 
-- **Prettier** - Formatador de código
-- **Docker** - Containerização
+- **TypeScript** - Type safety
+- **Prettier** - Formatação automática de código
+- **ESLint** - Linting e análise de código
+- **Docker & Docker Compose** - Containerização
 
 ## 🏗️ Arquitetura do Projeto
 
 ```
 src/
-├── app/
-│   ├── controllers/     # Controladores da aplicação
-│   ├── middlewares/     # Middlewares customizados
-│   └── routes/          # Definição de rotas
-├── config/              # Configuração da conexão com banco
-│   
-└── server.ts            # Ponto de entrada da aplicação
+├── controllers/
+│   ├── AuthController.ts        # Autenticação (register, login)
+│   └── FaturamentoController.ts # CRUD de faturamentos
+├── middleware/
+│   └── auth.ts                  # Validação de JWT
+├── routes/
+│   └── routes.ts                # Definição de rotas
+├── config/
+│   ├── database.ts              # Pool de conexões PostgreSQL
+│   └── init.sql                 # Schema inicial do banco
+└── server.ts                    # Ponto de entrada da aplicação
 ```
 
 ## 📊 Estrutura do Banco de Dados
 
-O projeto utiliza PostgreSQL com as seguintes tabelas principais:
+### Tabelas Principais
 
-- **tb_user** - Usuários do sistema
-- **tb_post** - Posts do blog
-- **tb_category** - Categorias dos posts
-- **tb_role** - Papéis dos usuários (admin, teacher, student)
+#### `usuarios`
+Armazena informações dos usuários/clínicas do sistema.
 
-### Módulo pedagógico (MVP)
+```sql
+- id (SERIAL PRIMARY KEY)
+- nome (VARCHAR 255)
+- email (VARCHAR 255 UNIQUE)
+- senha (VARCHAR 255 - bcrypt hash)
+- created_at (TIMESTAMP)
+```
 
-As tabelas do módulo de acompanhamento pedagógico são criadas pela migration em `src/database/migrations/001_pedagogico.sql` (executada **após** o schema base).
+#### `faturamentos`
+Registro central de todos os atendimentos e seu ciclo de faturamento.
 
-**Tabelas criadas/alteradas:**
+```sql
+- id (SERIAL PRIMARY KEY)
+- usuario_id (FOREIGN KEY → usuarios.id)
+- nome_paciente (VARCHAR 255)
+- documento (VARCHAR 50)
+- exame (VARCHAR 100)
+- convenio (VARCHAR 100)
+- data_atendimento (TIMESTAMP)
+- data_envio (TIMESTAMP - nullable)
+- data_faturamento (TIMESTAMP - nullable)
+- data_recebimento (TIMESTAMP - nullable)
+- created_at (TIMESTAMP)
+```
 
-- **tb_user:** novos campos `date_of_birth`, `current_grade`, `guardians` (JSONB), `is_active`
-- **tb_teacher_subject**, **tb_student_learning_level**, **tb_content**, **tb_learning_path**, **tb_learning_path_content**
-- **tb_assessment**, **tb_question**, **tb_student_answer**, **tb_assessment_result**, **tb_recommendation**, **tb_student_progress**
-
-**Como rodar as migrations:**
-
-1. **Ambiente já configurado** (`.env` com `DATABASE_URL` definida):
-
-   ```bash
-   yarn db:migrate
-   # ou
-   npm run db:migrate
-   ```
-
-   O script executa, em ordem, todos os arquivos `.sql` em `src/database/migrations/` usando a conexão do projeto (não precisa ter `psql` instalado).
-
-2. **Configuração do ambiente com Docker:** na **primeira vez** que você sobe o banco com `docker compose up`, o Postgres executa automaticamente o schema base e as migrations (arquivos em `docker-entrypoint-initdb.d/`). Ou seja, **não é preciso rodar `db:migrate` manualmente** quando o ambiente é criado pelo Docker; as migrations já foram aplicadas na inicialização do container.
-
-   Se você recriar o volume do banco (`docker compose down -v` e subir de novo), o schema e as migrations rodarão de novo na subida.
-
-Referência: [docs/DATA_MODEL.md](docs/DATA_MODEL.md) e [docs/CHECKLIST_IMPLEMENTACAO_MVP.md](docs/CHECKLIST_IMPLEMENTACAO_MVP.md) (Parte 1).
+### Índices
+- `idx_faturamentos_usuario` - Performance em buscas por usuário
 
 ## 🚀 Como Executar
 
 ### Pré-requisitos
 
 - Node.js 16+
-- PostgreSQL
-- Docker
+- npm ou yarn
+- PostgreSQL (ou use Docker)
+- Git
 
 ### Instalação Local
 
 1. **Clone o repositório**
 
 ```bash
-git clone https://github.com/dfsilvadev/challange-blog-api.git
-cd challange-blog-api
+git clone https://github.com/Glomes/consults-facture-manager.git
+cd consults-facture-manager
 ```
 
 2. **Instale as dependências**
@@ -104,179 +118,367 @@ yarn install
 ```
 
 3. **Configure as variáveis de ambiente**
-   Crie um arquivo `.env` na raiz do projeto:
+
+Crie um arquivo `.env` na raiz do projeto:
 
 ```env
-DATABASE_URL=postgres://<DB_USER>:<DB_PASSWORD>@db:5432/<DB_NAME>
+# Banco de dados
+DATABASE_URL=postgres://user:password@localhost:5432/faturamento_db
 
-# POSTGRES
-POSTGRES_USER='<DB_USER>'
-POSTGRES_PASSWORD='<DB_PASSWORD>'
-POSTGRES_DB='<DB_NAME>'
+# PostgreSQL (se usar Docker)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=seu_password_aqui
+POSTGRES_DB=faturamento_db
 
 # JWT
-JWT_SECRET='<Key>'
+JWT_SECRET=sua_chave_secreta_super_segura
 
-# EXPRESS
+# Express
 PORT=3001
 NODE_ENV=development
 ```
 
-4. **Execute a aplicação**
+4. **Execute as migrations do banco**
 
 ```bash
-# Desenvolvimento
+npm run db:migrate
+```
+
+5. **Inicie a aplicação**
+
+```bash
+# Modo desenvolvimento
 npm run dev
 
-# Produção
+# Modo produção
 npm run build
 npm start
 ```
+
+A API estará disponível em: `http://localhost:3001`
 
 ### Execução com Docker
 
 1. **Execute com Docker Compose**
 
-   Na **primeira execução**, o Postgres aplica automaticamente o schema base e as migrations do módulo pedagógico (arquivos em `docker-entrypoint-initdb.d/`). Não é necessário rodar `yarn db:migrate` quando o ambiente é criado pelo Docker.
-
 ```bash
-# Primeira execução ou após mudanças
+# Build e execução (primeira vez)
 docker compose up --build
 
 # Execuções subsequentes
 docker compose up -d
 
-# Teste de fluxo da execução do Docker
-docker build --progress=plain .
+# Parar os containers
+docker compose down
+
+# Remover volumes (limpar banco de dados)
+docker compose down -v
 ```
 
-A aplicação estará disponível em:
-
-- API: http://localhost:3001
-
-Como acessar a API a partir do Expo (React Native):
-
-- Android emulator (AVD): use `http://10.0.2.2:3001`
-- iOS simulator: use `http://localhost:3001`
-- Dispositivo físico (mesma rede): use `http://<IP_DO_SEU_PC>:3001` (ex.: `http://192.168.0.42:3001`)
-
-Observação: certifique-se de que o firewall do Windows permite conexões na porta `3001` e que o container Docker está em execução.
-
-#### Estrutura do Banco
-
-Após conectar, você verá:
-
-```
-blog_db/
-├── Schemas/
-│   └── public/
-│       ├── Tables/
-│       │   ├── tb_user
-│       │   ├── tb_post
-│       │   ├── tb_category
-│       │   └── tb_role
-│       ├── Types/
-│       │   ├── tb_role_enum
-│       │   └── tb_category_enum
-│       └── Functions/
-│           └── set_updated_at()
-```
+A aplicação estará em: `http://localhost:3001`
 
 ## 📝 Scripts Disponíveis
 
 ```bash
 # Desenvolvimento
-npm run dev          # Executa em modo desenvolvimento
-npm run build        # Compila o TypeScript
-npm start           # Executa em produção
+npm run dev              # Inicia em modo watch
+npm run build            # Compila TypeScript
 
-# Banco de dados (migrations do módulo pedagógico)
-npm run db:migrate   # Executa migrations em src/database/migrations/ (requer DATABASE_URL no .env)
+# Produção
+npm start               # Executa aplicação compilada
+
+# Banco de dados
+npm run db:migrate      # Executa migrations (requer DATABASE_URL no .env)
 
 # Qualidade de Código
-npm run lint        # Executa o ESLint
-npm run lint:fix    # Corrige problemas do ESLint
-npm run format      # Formata o código com Prettier
+npm run lint            # Executa ESLint
+npm run lint:fix        # Corrige problemas automaticamente
+npm run format          # Formata com Prettier
 
 # Testes
-npm test            # Executa os testes
-npm run test:watch  # Executa testes em modo watch
-npm run test:coverage # Executa testes com cobertura
+npm test               # Executa suite de testes
+npm run test:watch     # Modo watch
+npm run test:coverage  # Cobertura de testes
 ```
 
 ## 🔌 Endpoints da API
 
-### Usuários
+### 🔓 Autenticação (Público)
 
-- `GET /users` - Lista todos os usuários
-- `POST /users` - Cria um novo usuário
+| Método | Endpoint | Descrição | Payload |
+|--------|----------|-----------|---------|
+| POST | `/register` | Registrar novo usuário | `{ nome, email, senha }` |
+| POST | `/login` | Login e obter JWT | `{ email, senha }` |
 
-### Exemplo de Uso
+### 🔐 Faturamentos (Requer JWT)
+
+Todos os endpoints abaixo exigem o header:
+```
+Authorization: Bearer SEU_TOKEN_JWT
+```
+
+| Método | Endpoint | Descrição | Query/Payload |
+|--------|----------|-----------|---------------|
+| GET | `/faturamentos` | Listar faturamentos | `?page=1&limit=20&status=&convenio=&order=desc` |
+| POST | `/faturamentos` | Criar novo faturamento | `{ nome_paciente, documento, exame, convenio, data_atendimento }` |
+| PATCH | `/faturamentos/:id` | Atualizar status | `{ tipo: "envio\|faturamento\|recebimento" }` |
+| DELETE | `/faturamentos/:id` | Remover faturamento | - |
+| GET | `/faturamentos/stats` | Estatísticas por convênio | - |
+
+## 📌 Exemplos de Uso
+
+### 1. Registrar Usuário
 
 ```bash
-# Listar usuários
-curl http://localhost:3001/users
-
-# Criar usuário
-curl -X POST http://localhost:3001/users \
+curl -X POST http://localhost:3001/register \
   -H "Content-Type: application/json" \
-  -d '{"name": "João Silva", "age": 25}'
+  -d '{
+    "nome": "Clínica ABC",
+    "email": "clinica@example.com",
+    "senha": "senha_segura_123"
+  }'
 ```
 
-## 🧪 Testes
+**Resposta (201):**
+```json
+{
+  "id": 1,
+  "nome": "Clínica ABC",
+  "email": "clinica@example.com"
+}
+```
 
-O projeto utiliza Jest para testes automatizados:
+### 2. Fazer Login
 
 ```bash
-# Executar todos os testes
-npm test
-
-# Executar testes com cobertura
-npm run test:coverage
-
-# Executar testes em modo watch
-npm run test:watch
+curl -X POST http://localhost:3001/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "clinica@example.com",
+    "senha": "senha_segura_123"
+  }'
 ```
 
-## 🔧 Configuração de Desenvolvimento
+**Resposta (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "nome": "Clínica ABC"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
 
-### ESLint
+### 3. Criar Faturamento
 
-O projeto utiliza ESLint com configurações customizadas para TypeScript e boas práticas.
+```bash
+curl -X POST http://localhost:3001/faturamentos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -d '{
+    "nome_paciente": "João Silva",
+    "documento": "123.456.789-00",
+    "exame": "Consulta Cardiologia",
+    "convenio": "BRADESCO",
+    "data_atendimento": "2026-05-15T10:30:00"
+  }'
+```
 
-### Prettier
+**Resposta (201):**
+```json
+{
+  "id": 1,
+  "usuario_id": 1,
+  "nome_paciente": "João Silva",
+  "documento": "123.456.789-00",
+  "exame": "Consulta Cardiologia",
+  "convenio": "BRADESCO",
+  "data_atendimento": "2026-05-15T10:30:00",
+  "data_envio": null,
+  "data_faturamento": null,
+  "data_recebimento": null,
+  "created_at": "2026-05-19T12:00:00Z"
+}
+```
 
-Formatação automática de código configurada para manter consistência.
+### 4. Listar Faturamentos com Filtros
 
-### Git Hooks
+```bash
+curl "http://localhost:3001/faturamentos?page=1&status=nao_enviado&convenio=BRADESCO&order=desc" \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+```
 
-- **Husky** - Configura hooks do Git
-- **lint-staged** - Executa linting apenas em arquivos modificados
+**Query Strings Disponíveis:**
+- `page` - Número da página (padrão: 1)
+- `status` - `nao_enviado`, `enviado`, `faturado`, `recebido`
+- `convenio` - Nome do convênio (ex: BRADESCO, GEAP)
+- `order` - `asc` ou `desc` (padrão: desc)
+
+### 5. Atualizar Status de Faturamento
+
+```bash
+curl -X PATCH http://localhost:3001/faturamentos/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -d '{
+    "tipo": "envio"
+  }'
+```
+
+**Tipos de Status:**
+- `envio` - Marca como enviado
+- `faturamento` - Marca como faturado (requer ter sido enviado)
+- `recebimento` - Marca como recebido (requer ter sido faturado)
+
+### 6. Obter Estatísticas
+
+```bash
+curl http://localhost:3001/faturamentos/stats \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+```
+
+**Resposta:**
+```json
+[
+  {
+    "nome": "BRADESCO",
+    "precisaEnviar": 5,
+    "enviados": 3,
+    "faturados": 2,
+    "recebidos": 1
+  },
+  {
+    "nome": "GEAP",
+    "precisaEnviar": 2,
+    "enviados": 1,
+    "faturados": 0,
+    "recebidos": 0
+  }
+]
+```
+
+### 7. Deletar Faturamento
+
+```bash
+curl -X DELETE http://localhost:3001/faturamentos/1 \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+```
+
+**Resposta (204):** Sem conteúdo
+
+## 🔄 Fluxo do Ciclo de Faturamento
+
+```
+Não Enviado
+    ↓
+    └─→ PATCH /faturamentos/:id { "tipo": "envio" }
+    ↓
+Enviado
+    ↓
+    └─→ PATCH /faturamentos/:id { "tipo": "faturamento" }
+    ↓
+Faturado
+    ↓
+    └─→ PATCH /faturamentos/:id { "tipo": "recebimento" }
+    ↓
+Recebido ✅
+```
+
+## 🔑 Convênios Suportados
+
+Atualmente, o sistema aceita os seguintes convênios:
+
+- **BRADESCO**
+- **GEAP**
+
+Para adicionar novos convênios, atualize o array `conveniosValidos` em `src/controllers/FaturamentoController.ts`.
+
+## 🛡️ Segurança
+
+- ✅ Senhas criptografadas com bcryptjs
+- ✅ Autenticação via JWT com expiração de 7 dias
+- ✅ CORS configurado com whitelist de origens
+- ✅ Helmet para headers de segurança HTTP
+- ✅ Validação de entrada em todos os endpoints
+- ✅ Isolamento de dados por usuário
+
+## 🚨 Validações
+
+### Faturamento
+- ✅ Nome do paciente deve conter pelo menos uma letra
+- ✅ Data de atendimento não pode ser futura
+- ✅ Convênio deve estar na lista de convênios válidos
+- ✅ Não permite duplicatas (mesmo documento, exame, data, usuário)
+
+### Autenticação
+- ✅ Email único por usuário
+- ✅ Senha obrigatória (mínimo 6 caracteres recomendado)
+
+## 📱 Acesso via React Native (Expo)
+
+Se você estiver desenvolvendo um frontend em React Native com Expo:
+
+```javascript
+// Android Emulator (AVD)
+const API_URL = 'http://10.0.2.2:3001';
+
+// iOS Simulator
+const API_URL = 'http://localhost:3001';
+
+// Dispositivo Físico (mesma rede)
+const API_URL = 'http://<SEU_IP_LOCAL>:3001';
+// Exemplo: http://192.168.0.42:3001
+```
+
+## 🐛 Troubleshooting
+
+### Erro de Conexão com Banco
+```
+Error: connect ECONNREFUSED 127.0.0.1:5432
+```
+- Verifique se PostgreSQL está rodando
+- Confirme `DATABASE_URL` no `.env`
+- Se usa Docker, execute `docker compose up -d`
+
+### Token Inválido
+```json
+{"error": "Token inválido ou expirado"}
+```
+- Faça login novamente para obter novo token
+- Verifique se `JWT_SECRET` está configurado
+
+### CORS Error
+```
+Access to XMLHttpRequest blocked by CORS policy
+```
+- Adicione sua origem em `allowedOrigins` no `src/server.ts`
+- Reinicie a aplicação
 
 ## 📦 Estrutura de Dependências
 
 ### Dependências Principais
-
 - `express` - Framework web
-- `cors` - Middleware para CORS
-- `dotenv` - Gerenciamento de variáveis de ambiente
+- `cors` - Middleware CORS
+- `dotenv` - Variáveis de ambiente
 - `pg` - Cliente PostgreSQL
-- `express-validator` - Validação de dados
+- `jsonwebtoken` - JWT
+- `bcryptjs` - Hash de senhas
+- `helmet` - Segurança HTTP
 
 ### Dependências de Desenvolvimento
-
-- `typescript` - Compilador TypeScript
-- `jest` - Framework de testes
-- `eslint` - Linter
-- `prettier` - Formatador
-- `husky` - Git hooks
+- `typescript` - Type safety
+- `@types/node` - Tipos Node.js
+- `@types/express` - Tipos Express
+- `prettier` - Formatação
+- `eslint` - Linting
 
 ## 🤝 Contribuição
 
 1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
+2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
 5. Abra um Pull Request
 
 ## 📄 Licença
@@ -285,146 +487,24 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## 👨‍💻 Autor
 
-**Daniel Silva**
+**Glomes**
 
-- Email: dfsilva.dxp@gmail.com
-- GitHub: [@dfsilvadev](https://github.com/dfsilvadev)
+- GitHub: [@Glomes](https://github.com/Glomes)
 
-## 🔮 Próximos Passos
+## 🔮 Roadmap
 
-- [x] Implementar autenticação JWT
-- [ ] Adicionar validação de dados com express-validator
-- [ ] Implementar upload de imagens
-- [ ] Adicionar documentação com Swagger
+- [ ] Relatório de faturamento em PDF
+- [ ] Integração com webhooks de convênios
+- [ ] Dashboard com gráficos avançados
+- [ ] Suporte a mais convênios
+- [ ] Notificações por email
+- [ ] Documentação OpenAPI/Swagger
+- [ ] Testes automatizados
 
----
+## ⭐ Contribua
 
-⭐ Se este projeto te ajudou, considere dar uma estrela no repositório!
-
-## 📚 Funcionalidades
-
-- Cadastro e autenticação de usuários (JWT)
-- CRUD de posts (criação, listagem, atualização, deleção)
-- CRUD de categorias
-- Filtros por usuário, categoria, paginação e ordenação
-- Validação de dados com middlewares
-- Testes automatizados
-- Docker para ambiente isolado
+Se este projeto te ajudou, considere dar uma ⭐ no repositório!
 
 ---
 
-## 🔑 Autenticação
-
-A API utiliza autenticação JWT.
-Para acessar rotas protegidas, obtenha um token via `/auth/login` e envie no header:
-
-```
-Authorization: Bearer SEU_TOKEN_AQUI
-```
-
----
-
-## 📖 Rotas Principais
-
-| Método | Endpoint    | Descrição                     | Autenticação | Payload/Query                                         |
-| ------ | ----------- | ----------------------------- | ------------ | ----------------------------------------------------- |
-| POST   | /auth/login | Login e obtenção de token JWT | Não          | `{ username, password }`                              |
-| GET    | /posts      | Listar posts ativos           | Não          | `?page&limit&orderBy`                                 |
-| GET    | /posts/:id  | Buscar post por ID            | Não          |                                                       |
-| POST   | /posts      | Criar novo post               | Sim          | `{ title, content, is_active, user_id, category_id }` |
-| PATCH  | /posts/:id  | Atualizar post                | Sim          | `{ title?, content?, is_active?, category_id? }`      |
-| DELETE | /posts/:id  | Remover post                  | Sim          |                                                       |
-| GET    | /users/:id  | Buscar usuário por ID         | Sim          |                                                       |
-| POST   | /users      | Criar usuário                 | Não          | `{ name, email, password, ... }`                      |
-| ...    | ...         | ...                           | ...          | ...                                                   |
-
----
-
-## 📝 Exemplos de Payloads
-
-### Login
-
-```json
-POST /auth/login
-{
-  "username": "dfsilva@email.com",
-  "password": "SENHA_AQUI"
-}
-```
-
-### Criar Post
-
-```json
-POST /posts
-{
-  "title": "Novo Post",
-  "content": "Conteúdo do post",
-  "is_active": true,
-  "user_id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
-  "category_id": "c0a8012e-7f4f-4f33-b3b2-9a47f845a6aa"
-}
-```
-
-### Atualizar Post
-
-```json
-PATCH /posts/:id
-{
-  "title": "Título atualizado",
-  "is_active": false
-}
-```
-
----
-
-## 🧑‍💻 Exemplos de Uso (curl)
-
-### Login e uso do token
-
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"dfsilva@email.com","password":"SENHA_AQUI"}'
-```
-
-### Listar posts
-
-```bash
-curl http://localhost:3000/posts
-```
-
-### Criar post (autenticado)
-
-```bash
-curl -X POST http://localhost:3000/posts \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
-  -d '{"title":"Novo Post","content":"Conteúdo","is_active":true,"user_id":"...","category_id":"..."}'
-```
-
-### Atualizar post
-
-```bash
-curl -X PATCH http://localhost:3000/posts/POST_ID \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
-  -d '{"title":"Novo título"}'
-```
-
-### Deletar post
-
-```bash
-curl -X DELETE http://localhost:3000/posts/POST_ID \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
-```
-
----
-
-## 🔄 Fluxo de uso recomendado
-
-1. **Crie um usuário** (se necessário)
-2. **Faça login** para obter o token JWT
-3. **Use o token** para acessar rotas protegidas (criar, atualizar, deletar posts)
-4. **Liste, busque, atualize e remova posts conforme necessário**
-
----
+**Desenvolvido com ❤️ para clínicas conveniadas**
