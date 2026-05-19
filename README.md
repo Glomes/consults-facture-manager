@@ -4,7 +4,7 @@ API RESTful para monitoramento de faturamento para clinicas conveniadas.
 
 ## Features
 
-- CRUD de posts, usuários e categorias
+- CRUD de atendimentos e usuários
 - Autenticação JWT
 - Validação de dados com middlewares
 - Paginação e filtros
@@ -35,19 +35,10 @@ src/
 ├── app/
 │   ├── controllers/     # Controladores da aplicação
 │   ├── middlewares/     # Middlewares customizados
-│   ├── repositories/    # Camada de acesso a dados
-│   ├── routes/          # Definição de rotas
-│   └── utils/           # Utilitários da aplicação
-├── database/
-│   ├── db.ts           # Configuração da conexão com banco
-│   ├── migrations/     # Migrations do módulo pedagógico (executar após schema base)
-│   │   └── 001_pedagogico.sql
-│   └── models/
-│       └── schema.sql  # Schema do banco de dados (blog + base)
-├── utils/
-│   └── config/
-│       └── config.ts   # Configurações da aplicação
-└── main.ts             # Ponto de entrada da aplicação
+│   └── routes/          # Definição de rotas
+├── config/              # Configuração da conexão com banco
+│   
+└── server.ts            # Ponto de entrada da aplicação
 ```
 
 ## 📊 Estrutura do Banco de Dados
@@ -58,16 +49,6 @@ O projeto utiliza PostgreSQL com as seguintes tabelas principais:
 - **tb_post** - Posts do blog
 - **tb_category** - Categorias dos posts
 - **tb_role** - Papéis dos usuários (admin, teacher, student)
-
-### Categorias Disponíveis
-
-- Portuguese
-- Mathematics
-- History
-- Geography
-- Science
-- Art
-- Physical Education
 
 ### Módulo pedagógico (MVP)
 
