@@ -1,4 +1,4 @@
-# 🚀 Challenge Blog API
+# 🚑 FaturaMed
 
 API RESTful para monitoramento de faturamento para clinicas conveniadas.
 
