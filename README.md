@@ -1,10 +1,10 @@
-# 💰 Consults Facture Manager
+# 💰 FaturaMed
 
-API RESTful para gerenciamento e monitoramento de faturamento de consultas médicas em clínicas conveniadas.
+API RESTful para alimentar o sistema **FaturaMed** para monitorar o faturamento de consultas médicas em clínicas conveniadas.
 
 ## 📋 Visão Geral
 
-O **Consults Facture Manager** é uma solução completa para rastrear o ciclo de vida do faturamento de atendimentos médicos, desde a consulta até o recebimento do pagamento. A aplicação permite que usuários (clínicas) monitorem o status do faturamento com múltiplos convênios e gera relatórios detalhados.
+O **FaturaMed** é uma solução completa para rastrear o ciclo de vida do faturamento de atendimentos médicos, desde a consulta até o recebimento do pagamento. A aplicação permite que usuários (clínicas) monitorem o status do faturamento com múltiplos convênios e gera relatórios detalhados.
 
 ## ✨ Features
 
@@ -12,7 +12,7 @@ O **Consults Facture Manager** é uma solução completa para rastrear o ciclo d
 - 📊 **CRUD de Faturamentos** - Criação, leitura, atualização e deleção de registros
 - 🔄 **Rastreamento de Status** - Acompanhamento completo: não enviado → enviado → faturado → recebido
 - 📈 **Relatórios Mensais** - Dados consolidados por mês e ano
-- 📉 **Estatísticas por Convênio** - Dashboard com métricas aggregadas
+- 📉 **Estatísticas por Convênio** - Dashboard com métricas agregadas
 - 🔍 **Filtros Avançados** - Busca por status, convênio e ordenação
 - 📄 **Validação de Dados** - Middleware customizado para garantir integridade
 - 🐳 **Docker Ready** - Containerização completa com Docker Compose
@@ -473,14 +473,6 @@ Access to XMLHttpRequest blocked by CORS policy
 - `prettier` - Formatação
 - `eslint` - Linting
 
-## 🤝 Contribuição
-
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
-4. Push para a branch (`git push origin feature/MinhaFeature`)
-5. Abra um Pull Request
-
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
@@ -507,4 +499,4 @@ Se este projeto te ajudou, considere dar uma ⭐ no repositório!
 
 ---
 
-**Desenvolvido com ❤️ para clínicas conveniadas**
+**Desenvolvido para clínicas conveniadas**
