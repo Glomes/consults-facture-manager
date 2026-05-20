@@ -1,11 +1,15 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import pool from '../config/database.js';
 
-const CONVENIOS_VALIDOS = ['BRADESCO', 'GEAP'];
+const CONVENIOS_VALIDOS = [
+  'BRADESCO',
+  'GEAP'
+];
 
 export const FaturamentoController = {
 
   async create(req: any, res: Response) {
+
     try {
 
       const {
@@ -17,9 +21,12 @@ export const FaturamentoController = {
       } = req.body;
 
       const nome = String(nome_paciente || '').trim();
+
       const convenioFormatado = String(convenio || '')
         .trim()
         .toUpperCase();
+
+      // VALIDAÇÕES
 
       if (!nome || !/[a-zA-ZÀ-ÿ]/.test(nome)) {
         return res.status(400).json({
@@ -47,6 +54,8 @@ export const FaturamentoController = {
         });
       }
 
+      // DUPLICIDADE
+
       const existe = await pool.query(
         `
         SELECT id
@@ -69,6 +78,8 @@ export const FaturamentoController = {
           error: 'Registro já existe'
         });
       }
+
+      // INSERT
 
       const { rows } = await pool.query(
         `
@@ -106,10 +117,12 @@ export const FaturamentoController = {
   },
 
   async list(req: any, res: Response) {
+
     try {
 
       const page = Number(req.query.page || 1);
       const limit = Number(req.query.limit || 20);
+
       const offset = (page - 1) * limit;
 
       const {
@@ -122,23 +135,38 @@ export const FaturamentoController = {
         'usuario_id = $1'
       ];
 
-      const valores: any[] = [req.userId];
+      const valores: any[] = [
+        req.userId
+      ];
 
       let index = 2;
 
+      // FILTRO CONVÊNIO
+
       if (convenio) {
-        filtros.push(`convenio = $${index}`);
-        valores.push(String(convenio).toUpperCase());
+
+        filtros.push(`
+          convenio = $${index}
+        `);
+
+        valores.push(
+          String(convenio).toUpperCase()
+        );
+
         index++;
       }
 
+      // FILTRO STATUS
+
       if (status === 'nao_enviado') {
+
         filtros.push(`
           data_envio IS NULL
         `);
       }
 
       if (status === 'enviado') {
+
         filtros.push(`
           data_envio IS NOT NULL
           AND data_faturamento IS NULL
@@ -146,6 +174,7 @@ export const FaturamentoController = {
       }
 
       if (status === 'faturado') {
+
         filtros.push(`
           data_faturamento IS NOT NULL
           AND data_recebimento IS NULL
@@ -153,6 +182,7 @@ export const FaturamentoController = {
       }
 
       if (status === 'recebido') {
+
         filtros.push(`
           data_recebimento IS NOT NULL
         `);
@@ -164,6 +194,8 @@ export const FaturamentoController = {
         order === 'asc'
           ? 'ASC'
           : 'DESC';
+
+      // QUERY PRINCIPAL
 
       const query = `
         SELECT *
@@ -177,7 +209,12 @@ export const FaturamentoController = {
       valores.push(limit);
       valores.push(offset);
 
-      const result = await pool.query(query, valores);
+      const result = await pool.query(
+        query,
+        valores
+      );
+
+      // TOTAL
 
       const totalResult = await pool.query(
         `
@@ -188,7 +225,9 @@ export const FaturamentoController = {
         valores.slice(0, index - 1)
       );
 
-      const total = Number(totalResult.rows[0].count);
+      const total = Number(
+        totalResult.rows[0].count
+      );
 
       return res.json({
         data: result.rows,
@@ -212,6 +251,7 @@ export const FaturamentoController = {
     try {
 
       const { id } = req.params;
+
       const { tipo } = req.body;
 
       if (!tipo) {
@@ -219,6 +259,8 @@ export const FaturamentoController = {
           error: 'Tipo não informado'
         });
       }
+
+      // BUSCA REGISTRO
 
       const busca = await pool.query(
         `
@@ -242,73 +284,88 @@ export const FaturamentoController = {
 
       const item = busca.rows[0];
 
-      let campo = '';
+      let query = '';
 
-      switch (tipo) {
+      // ENVIO
 
-        case 'envio':
+      if (tipo === 'envio') {
 
-          if (item.data_envio) {
-            return res.status(400).json({
-              error: 'Já enviado'
-            });
-          }
-
-          campo = 'data_envio';
-
-        break;
-
-        case 'faturamento':
-
-          if (!item.data_envio) {
-            return res.status(400).json({
-              error: 'Precisa ser enviado primeiro'
-            });
-          }
-
-          if (item.data_faturamento) {
-            return res.status(400).json({
-              error: 'Já faturado'
-            });
-          }
-
-          campo = 'data_faturamento';
-
-        break;
-
-        case 'recebimento':
-
-          if (!item.data_faturamento) {
-            return res.status(400).json({
-              error: 'Precisa ser faturado primeiro'
-            });
-          }
-
-          if (item.data_recebimento) {
-            return res.status(400).json({
-              error: 'Já recebido'
-            });
-          }
-
-          campo = 'data_recebimento';
-
-        break;
-
-        default:
-
+        if (item.data_envio) {
           return res.status(400).json({
-            error: 'Tipo inválido'
+            error: 'Já enviado'
           });
+        }
+
+        query = `
+          UPDATE faturamentos
+          SET data_envio = NOW()
+          WHERE id = $1
+          AND usuario_id = $2
+          RETURNING *
+        `;
       }
 
+      // FATURAMENTO
+
+      else if (tipo === 'faturamento') {
+
+        if (!item.data_envio) {
+          return res.status(400).json({
+            error: 'Precisa ser enviado primeiro'
+          });
+        }
+
+        if (item.data_faturamento) {
+          return res.status(400).json({
+            error: 'Já faturado'
+          });
+        }
+
+        query = `
+          UPDATE faturamentos
+          SET data_faturamento = NOW()
+          WHERE id = $1
+          AND usuario_id = $2
+          RETURNING *
+        `;
+      }
+
+      // RECEBIMENTO
+
+      else if (tipo === 'recebimento') {
+
+        if (!item.data_faturamento) {
+          return res.status(400).json({
+            error: 'Precisa ser faturado primeiro'
+          });
+        }
+
+        if (item.data_recebimento) {
+          return res.status(400).json({
+            error: 'Já recebido'
+          });
+        }
+
+        query = `
+          UPDATE faturamentos
+          SET data_recebimento = NOW()
+          WHERE id = $1
+          AND usuario_id = $2
+          RETURNING *
+        `;
+      }
+
+      else {
+
+        return res.status(400).json({
+          error: 'Tipo inválido'
+        });
+      }
+
+      // UPDATE
+
       const update = await pool.query(
-        `
-        UPDATE faturamentos
-        SET ${campo} = NOW()
-        WHERE id = $1
-        AND usuario_id = $2
-        RETURNING *
-        `,
+        query,
         [id, req.userId]
       );
 
@@ -316,7 +373,10 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error('UPDATE STATUS ERROR:', error);
+      console.error(
+        'UPDATE STATUS ERROR:',
+        error
+      );
 
       return res.status(500).json({
         error: 'Erro ao atualizar status'
@@ -343,7 +403,10 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error('DELETE ERROR:', error);
+      console.error(
+        'DELETE ERROR:',
+        error
+      );
 
       return res.status(500).json({
         error: 'Erro ao deletar'
@@ -389,7 +452,10 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error('STATS ERROR:', error);
+      console.error(
+        'STATS ERROR:',
+        error
+      );
 
       return res.status(500).json({
         error: 'Erro ao buscar estatísticas'
