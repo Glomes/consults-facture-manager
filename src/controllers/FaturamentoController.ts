@@ -298,7 +298,7 @@ export const FaturamentoController = {
 
           campo = 'data_envio';
 
-        break;
+          break;
 
         case 'faturamento':
 
@@ -316,7 +316,7 @@ export const FaturamentoController = {
 
           campo = 'data_faturamento';
 
-        break;
+          break;
 
         case 'pagamento':
 
@@ -334,7 +334,7 @@ export const FaturamentoController = {
 
           campo = 'data_pagamento';
 
-        break;
+          break;
 
         default:
 
@@ -451,6 +451,86 @@ export const FaturamentoController = {
 
       return res.status(500).json({
         error: 'Erro ao buscar estatísticas'
+      });
+    }
+  },
+
+  async getRelatorioMensal(req: any, res: Response) {
+
+    try {
+
+      const mes = Number(req.query.mes);
+      const ano = Number(req.query.ano);
+
+      const enviados = await pool.query(
+        `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND EXTRACT(MONTH FROM data_envio) = $2
+      AND EXTRACT(YEAR FROM data_envio) = $3
+      `,
+        [
+          req.userId,
+          mes,
+          ano
+        ]
+      );
+
+      const faturados = await pool.query(
+        `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND EXTRACT(MONTH FROM data_faturamento) = $2
+      AND EXTRACT(YEAR FROM data_faturamento) = $3
+      `,
+        [
+          req.userId,
+          mes,
+          ano
+        ]
+      );
+
+      const recebidos = await pool.query(
+        `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND EXTRACT(MONTH FROM data_pagamento) = $2
+      AND EXTRACT(YEAR FROM data_pagamento) = $3
+      `,
+        [
+          req.userId,
+          mes,
+          ano
+        ]
+      );
+
+      return res.json({
+
+        enviados: enviados.rows.length,
+
+        faturados: faturados.rows.length,
+
+        recebidos: recebidos.rows.length,
+
+        detalhes: {
+
+          enviados: enviados.rows,
+
+          faturados: faturados.rows,
+
+          recebidos: recebidos.rows
+        }
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+        error: 'Erro ao gerar relatório'
       });
     }
   }
