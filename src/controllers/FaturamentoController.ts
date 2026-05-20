@@ -1,236 +1,382 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import pool from '../config/database.js';
 
-const conveniosValidos = ['BRADESCO', 'GEAP'];
+const CONVENIOS_VALIDOS = ['BRADESCO', 'GEAP'];
 
 export const FaturamentoController = {
 
   async create(req: any, res: Response) {
-    const { nome_paciente, documento, exame, convenio, data_atendimento } = req.body;
-
     try {
-      const nome = (nome_paciente || '').trim();
-      const convenioFinal = (convenio || '').trim().toUpperCase();
 
-      if (!/[a-zA-Z]/.test(nome)) {
-        return res.status(400).json({ error: "Nome inválido" });
+      const {
+        nome_paciente,
+        documento,
+        exame,
+        convenio,
+        data_atendimento
+      } = req.body;
+
+      const nome = String(nome_paciente || '').trim();
+      const convenioFormatado = String(convenio || '')
+        .trim()
+        .toUpperCase();
+
+      if (!nome || !/[a-zA-ZÀ-ÿ]/.test(nome)) {
+        return res.status(400).json({
+          error: 'Nome inválido'
+        });
+      }
+
+      if (!CONVENIOS_VALIDOS.includes(convenioFormatado)) {
+        return res.status(400).json({
+          error: 'Convênio inválido'
+        });
       }
 
       const data = new Date(data_atendimento);
-      if (data > new Date()) {
-        return res.status(400).json({ error: "Data não pode ser futura" });
+
+      if (isNaN(data.getTime())) {
+        return res.status(400).json({
+          error: 'Data inválida'
+        });
       }
 
-      if (!conveniosValidos.includes(convenioFinal)) {
-        return res.status(400).json({ error: "Convênio inválido" });
+      if (data > new Date()) {
+        return res.status(400).json({
+          error: 'Data futura não permitida'
+        });
       }
 
       const existe = await pool.query(
-        `SELECT 1 FROM faturamentos 
-         WHERE documento = $1 
-         AND exame = $2 
-         AND data_atendimento = $3 
-         AND usuario_id = $4`,
-        [documento, exame, data_atendimento, req.userId]
+        `
+        SELECT id
+        FROM faturamentos
+        WHERE documento = $1
+        AND exame = $2
+        AND data_atendimento = $3
+        AND usuario_id = $4
+        `,
+        [
+          documento,
+          exame,
+          data_atendimento,
+          req.userId
+        ]
       );
 
       if (existe.rows.length > 0) {
-        return res.status(400).json({ error: "Registro já existe" });
+        return res.status(400).json({
+          error: 'Registro já existe'
+        });
       }
 
       const { rows } = await pool.query(
-        `INSERT INTO faturamentos 
-         (nome_paciente, documento, exame, convenio, data_atendimento, usuario_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [nome, documento, exame, convenioFinal, data_atendimento, req.userId]
+        `
+        INSERT INTO faturamentos (
+          nome_paciente,
+          documento,
+          exame,
+          convenio,
+          data_atendimento,
+          usuario_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6)
+        RETURNING *
+        `,
+        [
+          nome,
+          documento,
+          exame,
+          convenioFormatado,
+          data_atendimento,
+          req.userId
+        ]
       );
 
       return res.status(201).json(rows[0]);
 
     } catch (error) {
-      console.error("ERRO CREATE:", error);
-      return res.status(500).json({ error: "Erro ao inserir" });
+
+      console.error('CREATE ERROR:', error);
+
+      return res.status(500).json({
+        error: 'Erro ao criar faturamento'
+      });
     }
   },
 
   async list(req: any, res: Response) {
     try {
-      const page = Number(req.query.page) || 1;
-      const limit = 20;
+
+      const page = Number(req.query.page || 1);
+      const limit = Number(req.query.limit || 20);
       const offset = (page - 1) * limit;
 
-      const { status, convenio, order } = req.query;
+      const {
+        convenio,
+        status,
+        order
+      } = req.query;
 
-      let filtros = ['usuario_id = $1'];
-      let valores: any[] = [req.userId];
+      const filtros: string[] = [
+        'usuario_id = $1'
+      ];
+
+      const valores: any[] = [req.userId];
+
       let index = 2;
 
       if (convenio) {
-        filtros.push(`convenio = $${index++}`);
+        filtros.push(`convenio = $${index}`);
         valores.push(String(convenio).toUpperCase());
+        index++;
       }
 
       if (status === 'nao_enviado') {
-        filtros.push(`data_envio IS NULL AND data_faturamento IS NULL`);
-      } else if (status === 'enviado') {
-        filtros.push(`data_envio IS NOT NULL AND data_faturamento IS NULL`);
-      } else if (status === 'faturado') {
-        filtros.push(`data_faturamento IS NOT NULL AND data_recebimento IS NULL`);
-      } else if (status === 'recebido') {
-        filtros.push(`data_recebimento IS NOT NULL`);
+        filtros.push(`
+          data_envio IS NULL
+        `);
+      }
+
+      if (status === 'enviado') {
+        filtros.push(`
+          data_envio IS NOT NULL
+          AND data_faturamento IS NULL
+        `);
+      }
+
+      if (status === 'faturado') {
+        filtros.push(`
+          data_faturamento IS NOT NULL
+          AND data_recebimento IS NULL
+        `);
+      }
+
+      if (status === 'recebido') {
+        filtros.push(`
+          data_recebimento IS NOT NULL
+        `);
       }
 
       const where = filtros.join(' AND ');
-      const orderBy = order === 'asc' ? 'ASC' : 'DESC';
+
+      const orderBy =
+        order === 'asc'
+          ? 'ASC'
+          : 'DESC';
 
       const query = `
-        SELECT * FROM faturamentos
+        SELECT *
+        FROM faturamentos
         WHERE ${where}
-        ORDER BY COALESCE(data_recebimento, data_faturamento, data_envio, created_at) ${orderBy}
-        LIMIT $${index++} OFFSET $${index}
+        ORDER BY created_at ${orderBy}
+        LIMIT $${index}
+        OFFSET $${index + 1}
       `;
 
-      valores.push(limit, offset);
+      valores.push(limit);
+      valores.push(offset);
 
-      const { rows } = await pool.query(query, valores);
+      const result = await pool.query(query, valores);
 
-      const countQuery = `
-        SELECT COUNT(*) FROM faturamentos
+      const totalResult = await pool.query(
+        `
+        SELECT COUNT(*)
+        FROM faturamentos
         WHERE ${where}
-      `;
+        `,
+        valores.slice(0, index - 1)
+      );
 
-      const countResult = await pool.query(countQuery, valores.slice(0, index - 2));
-      const total = Number(countResult.rows[0].count);
+      const total = Number(totalResult.rows[0].count);
 
       return res.json({
-        data: rows,
+        data: result.rows,
         total,
         page,
         totalPages: Math.ceil(total / limit)
       });
 
     } catch (error) {
-      console.error("ERRO LIST:", error);
-      return res.status(500).json({ error: "Erro ao buscar dados" });
+
+      console.error('LIST ERROR:', error);
+
+      return res.status(500).json({
+        error: 'Erro ao listar faturamentos'
+      });
     }
   },
 
   async updateStatus(req: any, res: Response) {
-    const { id } = req.params;
-    const { tipo } = req.body;
 
     try {
+
+      const { id } = req.params;
+      const { tipo } = req.body;
+
       if (!tipo) {
-        return res.status(400).json({ error: "Tipo não informado" });
+        return res.status(400).json({
+          error: 'Tipo não informado'
+        });
       }
 
-      const { rows } = await pool.query(
-        `SELECT data_envio, data_faturamento, data_recebimento 
-         FROM faturamentos 
-         WHERE id = $1 AND usuario_id = $2`,
+      const busca = await pool.query(
+        `
+        SELECT
+          id,
+          data_envio,
+          data_faturamento,
+          data_recebimento
+        FROM faturamentos
+        WHERE id = $1
+        AND usuario_id = $2
+        `,
         [id, req.userId]
       );
 
-      if (rows.length === 0) {
-        return res.status(404).json({ error: "Não encontrado" });
+      if (busca.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Faturamento não encontrado'
+        });
       }
 
-      const item = rows[0];
+      const item = busca.rows[0];
+
       let campo = '';
 
-      if (tipo === 'envio') {
-        if (item.data_envio) return res.status(400).json({ error: "Já enviado" });
-        campo = 'data_envio';
-      } else if (tipo === 'faturamento') {
-        if (!item.data_envio) return res.status(400).json({ error: "Precisa ser enviado antes" });
-        if (item.data_faturamento) return res.status(400).json({ error: "Já faturado" });
-        campo = 'data_faturamento';
-      } else if (tipo === 'recebimento') {
-        if (!item.data_faturamento) return res.status(400).json({ error: "Precisa ser faturado antes" });
-        if (item.data_recebimento) return res.status(400).json({ error: "Já recebido" });
-        campo = 'data_recebimento';
-      } else {
-        return res.status(400).json({ error: "Tipo inválido" });
+      switch (tipo) {
+
+        case 'envio':
+
+          if (item.data_envio) {
+            return res.status(400).json({
+              error: 'Já enviado'
+            });
+          }
+
+          campo = 'data_envio';
+
+        break;
+
+        case 'faturamento':
+
+          if (!item.data_envio) {
+            return res.status(400).json({
+              error: 'Precisa ser enviado primeiro'
+            });
+          }
+
+          if (item.data_faturamento) {
+            return res.status(400).json({
+              error: 'Já faturado'
+            });
+          }
+
+          campo = 'data_faturamento';
+
+        break;
+
+        case 'recebimento':
+
+          if (!item.data_faturamento) {
+            return res.status(400).json({
+              error: 'Precisa ser faturado primeiro'
+            });
+          }
+
+          if (item.data_recebimento) {
+            return res.status(400).json({
+              error: 'Já recebido'
+            });
+          }
+
+          campo = 'data_recebimento';
+
+        break;
+
+        default:
+
+          return res.status(400).json({
+            error: 'Tipo inválido'
+          });
       }
 
       const update = await pool.query(
-        `UPDATE faturamentos 
-         SET ${campo} = NOW()
-         WHERE id = $1 AND usuario_id = $2
-         RETURNING *`,
+        `
+        UPDATE faturamentos
+        SET ${campo} = NOW()
+        WHERE id = $1
+        AND usuario_id = $2
+        RETURNING *
+        `,
         [id, req.userId]
       );
 
       return res.json(update.rows[0]);
 
     } catch (error) {
-      console.error("ERRO UPDATE STATUS:", error);
-      return res.status(500).json({ error: "Erro ao atualizar status" });
+
+      console.error('UPDATE STATUS ERROR:', error);
+
+      return res.status(500).json({
+        error: 'Erro ao atualizar status'
+      });
     }
   },
 
-  async relatorioMensal(req: any, res: Response) {
-    const { mes, ano } = req.query;
+  async delete(req: any, res: Response) {
 
     try {
-      const { rows } = await pool.query(
+
+      const { id } = req.params;
+
+      await pool.query(
         `
-        SELECT
-          COUNT(*) FILTER (
-            WHERE data_envio IS NOT NULL
-            AND EXTRACT(MONTH FROM data_envio) = $2
-            AND EXTRACT(YEAR FROM data_envio) = $3
-          ) AS enviados,
-
-          COUNT(*) FILTER (
-            WHERE data_faturamento IS NOT NULL
-            AND EXTRACT(MONTH FROM data_faturamento) = $2
-            AND EXTRACT(YEAR FROM data_faturamento) = $3
-          ) AS faturados,
-
-          COUNT(*) FILTER (
-            WHERE data_recebimento IS NOT NULL
-            AND EXTRACT(MONTH FROM data_recebimento) = $2
-            AND EXTRACT(YEAR FROM data_recebimento) = $3
-          ) AS recebidos
-
-        FROM faturamentos
-        WHERE usuario_id = $1
+        DELETE FROM faturamentos
+        WHERE id = $1
+        AND usuario_id = $2
         `,
-        [req.userId, mes, ano]
+        [id, req.userId]
       );
 
-      return res.json(rows[0]);
+      return res.status(204).send();
 
     } catch (error) {
-      console.error("ERRO RELATÓRIO:", error);
-      return res.status(500).json({ error: "Erro no relatório" });
+
+      console.error('DELETE ERROR:', error);
+
+      return res.status(500).json({
+        error: 'Erro ao deletar'
+      });
     }
   },
 
   async getStats(req: any, res: Response) {
+
     try {
+
       const { rows } = await pool.query(
         `
-        SELECT 
+        SELECT
           convenio as nome,
 
-          COUNT(CASE 
-            WHEN data_envio IS NULL AND data_faturamento IS NULL 
-            THEN 1 END)::INTEGER as "precisaEnviar",
+          COUNT(*) FILTER (
+            WHERE data_envio IS NULL
+          )::INTEGER as "precisaEnviar",
 
-          COUNT(CASE 
-            WHEN data_envio IS NOT NULL AND data_faturamento IS NULL 
-            THEN 1 END)::INTEGER as "enviados",
+          COUNT(*) FILTER (
+            WHERE data_envio IS NOT NULL
+            AND data_faturamento IS NULL
+          )::INTEGER as "enviados",
 
-          COUNT(CASE 
-            WHEN data_faturamento IS NOT NULL AND data_recebimento IS NULL 
-            THEN 1 END)::INTEGER as "faturados",
+          COUNT(*) FILTER (
+            WHERE data_faturamento IS NOT NULL
+            AND data_recebimento IS NULL
+          )::INTEGER as "faturados",
 
-          COUNT(CASE 
-            WHEN data_recebimento IS NOT NULL 
-            THEN 1 END)::INTEGER as "recebidos"
+          COUNT(*) FILTER (
+            WHERE data_recebimento IS NOT NULL
+          )::INTEGER as "recebidos"
 
         FROM faturamentos
         WHERE usuario_id = $1
@@ -242,24 +388,12 @@ export const FaturamentoController = {
       return res.json(rows);
 
     } catch (error) {
-      console.error("ERRO STATS:", error);
-      return res.status(500).json({ error: "Erro nas estatísticas" });
-    }
-  },
 
-  async delete(req: any, res: Response) {
-    const { id } = req.params;
+      console.error('STATS ERROR:', error);
 
-    try {
-      await pool.query(
-        'DELETE FROM faturamentos WHERE id = $1 AND usuario_id = $2',
-        [id, req.userId]
-      );
-
-      return res.status(204).send();
-
-    } catch (error) {
-      return res.status(500).json({ error: "Erro ao deletar" });
+      return res.status(500).json({
+        error: 'Erro ao buscar estatísticas'
+      });
     }
   }
 };
