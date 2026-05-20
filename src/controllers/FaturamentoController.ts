@@ -124,7 +124,10 @@ export const FaturamentoController = {
     try {
 
       const page = Number(req.query.page || 1);
-      const limit = Number(req.query.limit || 20);
+
+      const limit = Number(
+        req.query.limit || 20
+      );
 
       const offset =
         (page - 1) * limit;
@@ -152,7 +155,8 @@ export const FaturamentoController = {
         );
 
         valores.push(
-          String(convenio).toUpperCase()
+          String(convenio)
+            .toUpperCase()
         );
 
         index++;
@@ -177,14 +181,14 @@ export const FaturamentoController = {
 
         filtros.push(`
           data_faturamento IS NOT NULL
-          AND data_recebimento IS NULL
+          AND data_pagamento IS NULL
         `);
       }
 
       if (status === 'recebido') {
 
         filtros.push(`
-          data_recebimento IS NOT NULL
+          data_pagamento IS NOT NULL
         `);
       }
 
@@ -254,29 +258,14 @@ export const FaturamentoController = {
 
       const { id } = req.params;
 
-      const {
-        tipo
-      }: {
-        tipo:
-          | 'envio'
-          | 'faturamento'
-          | 'recebimento'
-      } = req.body;
-
-      if (!tipo) {
-
-        return res.status(400).json({
-          error: 'Tipo não informado'
-        });
-      }
+      const { tipo } = req.body;
 
       const busca = await pool.query(
         `
         SELECT
-          id,
           data_envio,
           data_faturamento,
-          data_recebimento
+          data_pagamento
         FROM faturamentos
         WHERE id = $1
         AND usuario_id = $2
@@ -288,7 +277,6 @@ export const FaturamentoController = {
       );
 
       if (busca.rows.length === 0) {
-
         return res.status(404).json({
           error: 'Faturamento não encontrado'
         });
@@ -296,18 +284,13 @@ export const FaturamentoController = {
 
       const item = busca.rows[0];
 
-      let campo:
-        | 'data_envio'
-        | 'data_faturamento'
-        | 'data_recebimento'
-        | null = null;
+      let campo = '';
 
       switch (tipo) {
 
         case 'envio':
 
           if (item.data_envio) {
-
             return res.status(400).json({
               error: 'Já enviado'
             });
@@ -320,14 +303,12 @@ export const FaturamentoController = {
         case 'faturamento':
 
           if (!item.data_envio) {
-
             return res.status(400).json({
               error: 'Precisa ser enviado primeiro'
             });
           }
 
           if (item.data_faturamento) {
-
             return res.status(400).json({
               error: 'Já faturado'
             });
@@ -337,23 +318,21 @@ export const FaturamentoController = {
 
         break;
 
-        case 'recebimento':
+        case 'pagamento':
 
           if (!item.data_faturamento) {
-
             return res.status(400).json({
               error: 'Precisa ser faturado primeiro'
             });
           }
 
-          if (item.data_recebimento) {
-
+          if (item.data_pagamento) {
             return res.status(400).json({
-              error: 'Já recebido'
+              error: 'Já pago'
             });
           }
 
-          campo = 'data_recebimento';
+          campo = 'data_pagamento';
 
         break;
 
@@ -362,13 +341,6 @@ export const FaturamentoController = {
           return res.status(400).json({
             error: 'Tipo inválido'
           });
-      }
-
-      if (!campo) {
-
-        return res.status(400).json({
-          error: 'Campo inválido'
-        });
       }
 
       const update = await pool.query(
@@ -385,9 +357,7 @@ export const FaturamentoController = {
         ]
       );
 
-      return res.json(
-        update.rows[0]
-      );
+      return res.json(update.rows[0]);
 
     } catch (error) {
 
@@ -420,9 +390,7 @@ export const FaturamentoController = {
         ]
       );
 
-      return res
-        .status(204)
-        .send();
+      return res.status(204).send();
 
     } catch (error) {
 
@@ -458,11 +426,11 @@ export const FaturamentoController = {
 
           COUNT(*) FILTER (
             WHERE data_faturamento IS NOT NULL
-            AND data_recebimento IS NULL
+            AND data_pagamento IS NULL
           )::INTEGER as "faturados",
 
           COUNT(*) FILTER (
-            WHERE data_recebimento IS NOT NULL
+            WHERE data_pagamento IS NOT NULL
           )::INTEGER as "recebidos"
 
         FROM faturamentos
