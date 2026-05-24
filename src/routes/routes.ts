@@ -1,17 +1,15 @@
 import { Router } from 'express';
-
 import { FaturamentoController } from '../controllers/FaturamentoController.js';
 import { AuthController } from '../controllers/AuthController.js';
-
 import { authMiddleware } from '../middleware/auth.js';
 
 const routes = Router();
 
-/* PUBLIC */
+// Públicas
 routes.post('/register', AuthController.register);
 routes.post('/login', AuthController.login);
 
-/* PRIVATE */
+// Privadas
 routes.use(authMiddleware);
 
 routes.get(
@@ -41,7 +39,7 @@ routes.get(
 
 routes.get(
   '/faturamentos/relatorio',
-  FaturamentoController.getRelatorioMensal
+  FaturamentoController.getRelatorio
 );
 
 export default routes;

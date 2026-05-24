@@ -52,12 +52,6 @@ export const FaturamentoController = {
         });
       }
 
-      if (data > new Date()) {
-        return res.status(400).json({
-          error: 'Data futura não permitida'
-        });
-      }
-
       const existe = await pool.query(
         `
         SELECT id
@@ -108,10 +102,7 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error(
-        'CREATE ERROR:',
-        error
-      );
+      console.error('CREATE ERROR:', error);
 
       return res.status(500).json({
         error: 'Erro ao criar faturamento'
@@ -125,12 +116,9 @@ export const FaturamentoController = {
 
       const page = Number(req.query.page || 1);
 
-      const limit = Number(
-        req.query.limit || 20
-      );
+      const limit = Number(req.query.limit || 20);
 
-      const offset =
-        (page - 1) * limit;
+      const offset = (page - 1) * limit;
 
       const {
         convenio,
@@ -155,8 +143,7 @@ export const FaturamentoController = {
         );
 
         valores.push(
-          String(convenio)
-            .toUpperCase()
+          String(convenio).toUpperCase()
         );
 
         index++;
@@ -192,8 +179,7 @@ export const FaturamentoController = {
         `);
       }
 
-      const where =
-        filtros.join(' AND ');
+      const where = filtros.join(' AND ');
 
       const orderBy =
         order === 'asc'
@@ -234,17 +220,12 @@ export const FaturamentoController = {
         data: result.rows,
         total,
         page,
-        totalPages: Math.ceil(
-          total / limit
-        )
+        totalPages: Math.ceil(total / limit)
       });
 
     } catch (error) {
 
-      console.error(
-        'LIST ERROR:',
-        error
-      );
+      console.error('LIST ERROR:', error);
 
       return res.status(500).json({
         error: 'Erro ao listar faturamentos'
@@ -298,7 +279,7 @@ export const FaturamentoController = {
 
           campo = 'data_envio';
 
-          break;
+        break;
 
         case 'faturamento':
 
@@ -316,7 +297,7 @@ export const FaturamentoController = {
 
           campo = 'data_faturamento';
 
-          break;
+        break;
 
         case 'pagamento':
 
@@ -334,7 +315,7 @@ export const FaturamentoController = {
 
           campo = 'data_pagamento';
 
-          break;
+        break;
 
         default:
 
@@ -361,10 +342,7 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error(
-        'UPDATE STATUS ERROR:',
-        error
-      );
+      console.error('UPDATE STATUS ERROR:', error);
 
       return res.status(500).json({
         error: 'Erro ao atualizar status'
@@ -394,10 +372,7 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error(
-        'DELETE ERROR:',
-        error
-      );
+      console.error('DELETE ERROR:', error);
 
       return res.status(500).json({
         error: 'Erro ao deletar'
@@ -444,10 +419,7 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error(
-        'STATS ERROR:',
-        error
-      );
+      console.error('STATS ERROR:', error);
 
       return res.status(500).json({
         error: 'Erro ao buscar estatísticas'
@@ -455,7 +427,7 @@ export const FaturamentoController = {
     }
   },
 
-  async getRelatorioMensal(req: any, res: Response) {
+  async getRelatorio(req: any, res: Response) {
 
     try {
 
@@ -464,12 +436,14 @@ export const FaturamentoController = {
 
       const enviados = await pool.query(
         `
-      SELECT *
-      FROM faturamentos
-      WHERE usuario_id = $1
-      AND EXTRACT(MONTH FROM data_envio) = $2
-      AND EXTRACT(YEAR FROM data_envio) = $3
-      `,
+        SELECT *
+        FROM faturamentos
+        WHERE usuario_id = $1
+        AND data_envio IS NOT NULL
+        AND EXTRACT(MONTH FROM data_envio) = $2
+        AND EXTRACT(YEAR FROM data_envio) = $3
+        ORDER BY data_envio DESC
+        `,
         [
           req.userId,
           mes,
@@ -479,12 +453,14 @@ export const FaturamentoController = {
 
       const faturados = await pool.query(
         `
-      SELECT *
-      FROM faturamentos
-      WHERE usuario_id = $1
-      AND EXTRACT(MONTH FROM data_faturamento) = $2
-      AND EXTRACT(YEAR FROM data_faturamento) = $3
-      `,
+        SELECT *
+        FROM faturamentos
+        WHERE usuario_id = $1
+        AND data_faturamento IS NOT NULL
+        AND EXTRACT(MONTH FROM data_faturamento) = $2
+        AND EXTRACT(YEAR FROM data_faturamento) = $3
+        ORDER BY data_faturamento DESC
+        `,
         [
           req.userId,
           mes,
@@ -494,12 +470,14 @@ export const FaturamentoController = {
 
       const recebidos = await pool.query(
         `
-      SELECT *
-      FROM faturamentos
-      WHERE usuario_id = $1
-      AND EXTRACT(MONTH FROM data_pagamento) = $2
-      AND EXTRACT(YEAR FROM data_pagamento) = $3
-      `,
+        SELECT *
+        FROM faturamentos
+        WHERE usuario_id = $1
+        AND data_pagamento IS NOT NULL
+        AND EXTRACT(MONTH FROM data_pagamento) = $2
+        AND EXTRACT(YEAR FROM data_pagamento) = $3
+        ORDER BY data_pagamento DESC
+        `,
         [
           req.userId,
           mes,
@@ -527,7 +505,10 @@ export const FaturamentoController = {
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        'RELATORIO ERROR:',
+        error
+      );
 
       return res.status(500).json({
         error: 'Erro ao gerar relatório'
