@@ -429,90 +429,105 @@ export const FaturamentoController = {
 
   async getRelatorio(req: any, res: Response) {
 
-    try {
+  try {
 
-      const mes = Number(req.query.mes);
-      const ano = Number(req.query.ano);
+    const mes = Number(req.query.mes);
+    const ano = Number(req.query.ano);
 
-      const enviados = await pool.query(
-        `
-        SELECT *
-        FROM faturamentos
-        WHERE usuario_id = $1
-        AND data_envio IS NOT NULL
-        AND EXTRACT(MONTH FROM data_envio) = $2
-        AND EXTRACT(YEAR FROM data_envio) = $3
-        ORDER BY data_envio DESC
-        `,
-        [
-          req.userId,
-          mes,
-          ano
-        ]
-      );
-
-      const faturados = await pool.query(
-        `
-        SELECT *
-        FROM faturamentos
-        WHERE usuario_id = $1
-        AND data_faturamento IS NOT NULL
-        AND EXTRACT(MONTH FROM data_faturamento) = $2
-        AND EXTRACT(YEAR FROM data_faturamento) = $3
-        ORDER BY data_faturamento DESC
-        `,
-        [
-          req.userId,
-          mes,
-          ano
-        ]
-      );
-
-      const recebidos = await pool.query(
-        `
-        SELECT *
-        FROM faturamentos
-        WHERE usuario_id = $1
-        AND data_pagamento IS NOT NULL
-        AND EXTRACT(MONTH FROM data_pagamento) = $2
-        AND EXTRACT(YEAR FROM data_pagamento) = $3
-        ORDER BY data_pagamento DESC
-        `,
-        [
-          req.userId,
-          mes,
-          ano
-        ]
-      );
-
-      return res.json({
-
-        enviados: enviados.rows.length,
-
-        faturados: faturados.rows.length,
-
-        recebidos: recebidos.rows.length,
-
-        detalhes: {
-
-          enviados: enviados.rows,
-
-          faturados: faturados.rows,
-
-          recebidos: recebidos.rows
-        }
-      });
-
-    } catch (error) {
-
-      console.error(
-        'RELATORIO ERROR:',
-        error
-      );
-
-      return res.status(500).json({
-        error: 'Erro ao gerar relatório'
+    if (!mes || !ano) {
+      return res.status(400).json({
+        error: 'Mês e ano obrigatórios'
       });
     }
+
+    const enviados = await pool.query(
+      `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND data_envio IS NOT NULL
+      AND EXTRACT(MONTH FROM data_envio) = $2
+      AND EXTRACT(YEAR FROM data_envio) = $3
+      `,
+      [req.userId, mes, ano]
+    );
+
+    const faturados = await pool.query(
+      `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND data_faturamento IS NOT NULL
+      AND EXTRACT(MONTH FROM data_faturamento) = $2
+      AND EXTRACT(YEAR FROM data_faturamento) = $3
+      `,
+      [req.userId, mes, ano]
+    );
+
+    const recebidos = await pool.query(
+      `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND data_pagamento IS NOT NULL
+      AND EXTRACT(MONTH FROM data_pagamento) = $2
+      AND EXTRACT(YEAR FROM data_pagamento) = $3
+      `,
+      [req.userId, mes, ano]
+    );
+
+    // REGISTROS ÚNICOS
+    const registros = await pool.query(
+      `
+      SELECT *
+      FROM faturamentos
+      WHERE usuario_id = $1
+      AND (
+        (
+          data_envio IS NOT NULL
+          AND EXTRACT(MONTH FROM data_envio) = $2
+          AND EXTRACT(YEAR FROM data_envio) = $3
+        )
+        OR
+        (
+          data_faturamento IS NOT NULL
+          AND EXTRACT(MONTH FROM data_faturamento) = $2
+          AND EXTRACT(YEAR FROM data_faturamento) = $3
+        )
+        OR
+        (
+          data_pagamento IS NOT NULL
+          AND EXTRACT(MONTH FROM data_pagamento) = $2
+          AND EXTRACT(YEAR FROM data_pagamento) = $3
+        )
+      )
+      ORDER BY created_at DESC
+      `,
+      [req.userId, mes, ano]
+    );
+
+    return res.json({
+
+      enviados: enviados.rows.length,
+
+      faturados: faturados.rows.length,
+
+      recebidos: recebidos.rows.length,
+
+      registros: registros.rows
+
+    });
+
+  } catch (error) {
+
+    console.error(
+      'RELATORIO ERROR:',
+      error
+    );
+
+    return res.status(500).json({
+      error: 'Erro ao gerar relatório'
+    });
   }
+}
 };
