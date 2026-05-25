@@ -431,91 +431,109 @@ export const FaturamentoController = {
 
   try {
 
-    const mes = Number(req.query.mes);
-    const ano = Number(req.query.ano);
+    const { mes, ano } = req.query;
 
-    if (!mes || !ano) {
-      return res.status(400).json({
-        error: 'Mês e ano obrigatórios'
-      });
-    }
+    const mesNumero = Number(mes);
+    const anoNumero = Number(ano);
 
-    const enviados = await pool.query(
+    const { rows } = await pool.query(
       `
-      SELECT *
-      FROM faturamentos
-      WHERE usuario_id = $1
-      AND data_envio IS NOT NULL
-      AND EXTRACT(MONTH FROM data_envio) = $2
-      AND EXTRACT(YEAR FROM data_envio) = $3
-      `,
-      [req.userId, mes, ano]
-    );
-
-    const faturados = await pool.query(
-      `
-      SELECT *
-      FROM faturamentos
-      WHERE usuario_id = $1
-      AND data_faturamento IS NOT NULL
-      AND EXTRACT(MONTH FROM data_faturamento) = $2
-      AND EXTRACT(YEAR FROM data_faturamento) = $3
-      `,
-      [req.userId, mes, ano]
-    );
-
-    const recebidos = await pool.query(
-      `
-      SELECT *
-      FROM faturamentos
-      WHERE usuario_id = $1
-      AND data_pagamento IS NOT NULL
-      AND EXTRACT(MONTH FROM data_pagamento) = $2
-      AND EXTRACT(YEAR FROM data_pagamento) = $3
-      `,
-      [req.userId, mes, ano]
-    );
-
-    // REGISTROS ÚNICOS
-    const registros = await pool.query(
-      `
-      SELECT *
+      SELECT
+        id,
+        nome_paciente,
+        convenio,
+        exame,
+        data_envio,
+        data_faturamento,
+        data_pagamento
       FROM faturamentos
       WHERE usuario_id = $1
       AND (
         (
           data_envio IS NOT NULL
-          AND EXTRACT(MONTH FROM data_envio) = $2
-          AND EXTRACT(YEAR FROM data_envio) = $3
+          AND EXTRACT(MONTH FROM data_envio) <= $2
+          AND EXTRACT(YEAR FROM data_envio) <= $3
         )
         OR
         (
           data_faturamento IS NOT NULL
-          AND EXTRACT(MONTH FROM data_faturamento) = $2
-          AND EXTRACT(YEAR FROM data_faturamento) = $3
+          AND EXTRACT(MONTH FROM data_faturamento) <= $2
+          AND EXTRACT(YEAR FROM data_faturamento) <= $3
         )
         OR
         (
           data_pagamento IS NOT NULL
-          AND EXTRACT(MONTH FROM data_pagamento) = $2
-          AND EXTRACT(YEAR FROM data_pagamento) = $3
+          AND EXTRACT(MONTH FROM data_pagamento) <= $2
+          AND EXTRACT(YEAR FROM data_pagamento) <= $3
         )
       )
       ORDER BY created_at DESC
       `,
-      [req.userId, mes, ano]
+      [
+        req.userId,
+        mesNumero,
+        anoNumero
+      ]
     );
+
+    const aconteceuAteOMes = (
+      data: string | null
+    ) => {
+
+      if (!data) return false;
+
+      const d = new Date(data);
+
+      return (
+        d.getFullYear() < anoNumero
+        ||
+        (
+          d.getFullYear() === anoNumero
+          &&
+          d.getMonth() + 1 <= mesNumero
+        )
+      );
+    };
+
+    const detalhes = rows.map(item => ({
+
+      ...item,
+
+      data_envio:
+        aconteceuAteOMes(item.data_envio)
+          ? item.data_envio
+          : null,
+
+      data_faturamento:
+        aconteceuAteOMes(item.data_faturamento)
+          ? item.data_faturamento
+          : null,
+
+      data_pagamento:
+        aconteceuAteOMes(item.data_pagamento)
+          ? item.data_pagamento
+          : null
+    }));
+
+    const enviados = detalhes.filter(
+      item => item.data_envio
+    ).length;
+
+    const faturados = detalhes.filter(
+      item => item.data_faturamento
+    ).length;
+
+    const recebidos = detalhes.filter(
+      item => item.data_pagamento
+    ).length;
 
     return res.json({
 
-      enviados: enviados.rows.length,
+      enviados,
+      faturados,
+      recebidos,
 
-      faturados: faturados.rows.length,
-
-      recebidos: recebidos.rows.length,
-
-      registros: registros.rows
-
+      detalhes
     });
 
   } catch (error) {
@@ -529,5 +547,4 @@ export const FaturamentoController = {
       error: 'Erro ao gerar relatório'
     });
   }
-}
-};
+} };
