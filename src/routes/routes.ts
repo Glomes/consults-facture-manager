@@ -27,6 +27,11 @@ routes.patch(
   FaturamentoController.updateStatus
 );
 
+routes.patch(
+  '/faturamentos/:id/data',
+  FaturamentoController.updateDate
+);
+
 routes.delete(
   '/faturamentos/:id',
   FaturamentoController.delete

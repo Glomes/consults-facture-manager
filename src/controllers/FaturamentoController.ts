@@ -279,7 +279,7 @@ export const FaturamentoController = {
 
           campo = 'data_envio';
 
-        break;
+          break;
 
         case 'faturamento':
 
@@ -297,7 +297,7 @@ export const FaturamentoController = {
 
           campo = 'data_faturamento';
 
-        break;
+          break;
 
         case 'pagamento':
 
@@ -315,7 +315,7 @@ export const FaturamentoController = {
 
           campo = 'data_pagamento';
 
-        break;
+          break;
 
         default:
 
@@ -429,15 +429,15 @@ export const FaturamentoController = {
 
   async getRelatorio(req: any, res: Response) {
 
-  try {
+    try {
 
-    const { mes, ano } = req.query;
+      const { mes, ano } = req.query;
 
-    const mesNumero = Number(mes);
-    const anoNumero = Number(ano);
+      const mesNumero = Number(mes);
+      const anoNumero = Number(ano);
 
-    const { rows } = await pool.query(
-      `
+      const { rows } = await pool.query(
+        `
       SELECT
         id,
         nome_paciente,
@@ -469,82 +469,168 @@ export const FaturamentoController = {
       )
       ORDER BY created_at DESC
       `,
-      [
-        req.userId,
-        mesNumero,
-        anoNumero
-      ]
-    );
-
-    const aconteceuAteOMes = (
-      data: string | null
-    ) => {
-
-      if (!data) return false;
-
-      const d = new Date(data);
-
-      return (
-        d.getFullYear() < anoNumero
-        ||
-        (
-          d.getFullYear() === anoNumero
-          &&
-          d.getMonth() + 1 <= mesNumero
-        )
+        [
+          req.userId,
+          mesNumero,
+          anoNumero
+        ]
       );
-    };
 
-    const detalhes = rows.map(item => ({
+      const aconteceuAteOMes = (
+        data: string | null
+      ) => {
 
-      ...item,
+        if (!data) return false;
 
-      data_envio:
-        aconteceuAteOMes(item.data_envio)
-          ? item.data_envio
-          : null,
+        const d = new Date(data);
 
-      data_faturamento:
-        aconteceuAteOMes(item.data_faturamento)
-          ? item.data_faturamento
-          : null,
+        return (
+          d.getFullYear() < anoNumero
+          ||
+          (
+            d.getFullYear() === anoNumero
+            &&
+            d.getMonth() + 1 <= mesNumero
+          )
+        );
+      };
 
-      data_pagamento:
-        aconteceuAteOMes(item.data_pagamento)
-          ? item.data_pagamento
-          : null
-    }));
+      const detalhes = rows.map(item => ({
 
-    const enviados = detalhes.filter(
-      item => item.data_envio
-    ).length;
+        ...item,
 
-    const faturados = detalhes.filter(
-      item => item.data_faturamento
-    ).length;
+        data_envio:
+          aconteceuAteOMes(item.data_envio)
+            ? item.data_envio
+            : null,
 
-    const recebidos = detalhes.filter(
-      item => item.data_pagamento
-    ).length;
+        data_faturamento:
+          aconteceuAteOMes(item.data_faturamento)
+            ? item.data_faturamento
+            : null,
 
-    return res.json({
+        data_pagamento:
+          aconteceuAteOMes(item.data_pagamento)
+            ? item.data_pagamento
+            : null
+      }));
 
-      enviados,
-      faturados,
-      recebidos,
+      const enviados = detalhes.filter(
+        item => item.data_envio
+      ).length;
 
-      detalhes
-    });
+      const faturados = detalhes.filter(
+        item => item.data_faturamento
+      ).length;
 
-  } catch (error) {
+      const recebidos = detalhes.filter(
+        item => item.data_pagamento
+      ).length;
 
-    console.error(
-      'RELATORIO ERROR:',
-      error
-    );
+      return res.json({
 
-    return res.status(500).json({
-      error: 'Erro ao gerar relatório'
-    });
-  }
-} };
+        enviados,
+        faturados,
+        recebidos,
+
+        detalhes
+      });
+
+    } catch (error) {
+
+      console.error(
+        'RELATORIO ERROR:',
+        error
+      );
+
+      return res.status(500).json({
+        error: 'Erro ao gerar relatório'
+      });
+    }
+  },
+
+  async updateDate(req: any, res: Response) {
+
+    try {
+
+      const { id } = req.params;
+
+      const {
+        tipo,
+        data
+      } = req.body;
+
+      const campos = {
+        envio: 'data_envio',
+        faturamento: 'data_faturamento',
+        pagamento: 'data_pagamento'
+      } as const;
+
+      const campo =
+        campos[tipo as keyof typeof campos];
+
+      if (!campo) {
+
+        return res.status(400).json({
+          error: 'Tipo inválido'
+        });
+
+      }
+
+      const dataFormatada =
+        new Date(data);
+
+      if (
+        isNaN(dataFormatada.getTime())
+      ) {
+
+        return res.status(400).json({
+          error: 'Data inválida'
+        });
+
+      }
+
+      const update = await pool.query(
+        `
+      UPDATE faturamentos
+      SET ${campo} = $1
+      WHERE id = $2
+      AND usuario_id = $3
+      RETURNING *
+      `,
+        [
+          dataFormatada,
+          id,
+          req.userId
+        ]
+      );
+
+      if (
+        update.rows.length === 0
+      ) {
+
+        return res.status(404).json({
+          error: 'Faturamento não encontrado'
+        });
+
+      }
+
+      return res.json(
+        update.rows[0]
+      );
+
+    } catch (error) {
+
+      console.error(
+        'UPDATE DATE ERROR:',
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          'Erro ao atualizar data'
+      });
+
+    }
+  },
+};
